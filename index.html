@@ -29,7 +29,7 @@
   }
   .app {
     width: 100%;
-    max-width: 640px;
+    max-width: 1180px;
   }
   header {
     margin-bottom: 24px;
@@ -48,7 +48,8 @@
   .add-task-row {
     display: flex;
     gap: 8px;
-    margin-bottom: 24px;
+    margin-bottom: 20px;
+    max-width: 640px;
   }
   .add-task-row input {
     flex: 1;
@@ -75,13 +76,63 @@
   }
   .btn-primary:hover { opacity: 0.92; }
 
-  .task-list { display: flex; flex-direction: column; gap: 10px; }
+  /* ---------- overall progress ---------- */
+  .overview {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .overview-card {
+    flex: 1 1 240px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .overview-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .overview-label .name {
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .overview-label .stat {
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .bar-track {
+    height: 8px;
+    border-radius: 999px;
+    background: var(--line);
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 999px;
+    transition: width 0.25s ease;
+  }
+
+  /* ---------- grid of task cards ---------- */
+  .task-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+    align-items: start;
+  }
 
   .task-card {
     background: var(--card);
     border: 1px solid var(--line);
     border-radius: var(--radius);
     padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
   }
 
   .task-row {
@@ -139,10 +190,23 @@
   }
   .task-title.done { text-decoration: line-through; color: var(--muted); font-weight: 500; }
 
+  .task-progress { margin: 10px 0 2px; }
+  .task-progress-track {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--line);
+    overflow: hidden;
+  }
+  .task-progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 999px;
+    transition: width 0.25s ease;
+  }
   .progress-note {
     font-size: 0.78rem;
     color: var(--muted);
-    margin-top: 2px;
+    margin-top: 5px;
   }
 
   .task-actions {
@@ -161,12 +225,15 @@
   .icon-btn.danger:hover { background: #f7e6df; color: var(--danger); }
 
   .subtasks {
-    margin: 10px 0 4px 30px;
+    margin: 10px 0 4px;
     padding-left: 14px;
+    padding-right: 6px;
     border-left: 2px solid var(--line);
     display: flex;
     flex-direction: column;
     gap: 8px;
+    max-height: 210px;
+    overflow-y: auto;
   }
   .subtask-row {
     display: flex;
@@ -215,10 +282,11 @@
   .add-sub-row {
     display: flex;
     gap: 6px;
-    margin-top: 2px;
+    margin-top: 10px;
   }
   .add-sub-row input {
     flex: 1;
+    min-width: 0;
     padding: 7px 10px;
     border: 1px solid var(--line);
     border-radius: 7px;
@@ -231,6 +299,7 @@
     border-radius: 7px;
     font-size: 0.8rem;
     font-weight: 600;
+    white-space: nowrap;
   }
 
   .empty-state {
@@ -287,6 +356,23 @@
     <button class="btn-primary" id="addTaskBtn">Add task</button>
   </div>
 
+  <div class="overview" id="overview">
+    <div class="overview-card">
+      <div class="overview-label">
+        <span class="name">Tasks completed</span>
+        <span class="stat" id="overviewTasksStat">0/0 · 0%</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="overviewTasksFill" style="width:0%"></div></div>
+    </div>
+    <div class="overview-card">
+      <div class="overview-label">
+        <span class="name">Steps completed</span>
+        <span class="stat" id="overviewStepsStat">0/0 · 0%</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="overviewStepsFill" style="width:0%"></div></div>
+    </div>
+  </div>
+
   <div class="task-list" id="taskList"></div>
   <div class="empty-state" id="emptyState" style="display:none;">No tasks yet. Add one above to get started.</div>
 
@@ -309,6 +395,7 @@
 
   const taskListEl = document.getElementById('taskList');
   const emptyStateEl = document.getElementById('emptyState');
+  const overviewEl = document.getElementById('overview');
   const newTaskInput = document.getElementById('newTaskInput');
 
   function uid() { return nextId++; }
@@ -458,9 +545,31 @@
     }
   }
 
+  /* ---------- overall progress bars ---------- */
+  function renderOverview() {
+    overviewEl.style.display = tasks.length === 0 ? 'none' : 'flex';
+
+    const totalTasks = tasks.length;
+    const doneTasks = tasks.filter(t => t.done).length;
+    let totalSubs = 0, doneSubs = 0;
+    tasks.forEach(t => {
+      totalSubs += t.subtasks.length;
+      doneSubs += t.subtasks.filter(s => s.done).length;
+    });
+
+    const taskPct = totalTasks ? Math.round((doneTasks / totalTasks) * 100) : 0;
+    const subPct = totalSubs ? Math.round((doneSubs / totalSubs) * 100) : 0;
+
+    document.getElementById('overviewTasksFill').style.width = taskPct + '%';
+    document.getElementById('overviewTasksStat').textContent = `${doneTasks}/${totalTasks} · ${taskPct}%`;
+    document.getElementById('overviewStepsFill').style.width = subPct + '%';
+    document.getElementById('overviewStepsStat').textContent = `${doneSubs}/${totalSubs} · ${subPct}%`;
+  }
+
   /* ---------- rendering ---------- */
   function render() {
     saveState();
+    renderOverview();
     taskListEl.innerHTML = '';
     emptyStateEl.style.display = tasks.length === 0 ? 'block' : 'none';
 
@@ -489,15 +598,6 @@
       titleEl.textContent = `${tIdx + 1}. ${task.title}`;
       titleWrap.appendChild(titleEl);
 
-      if (task.subtasks.length > 0) {
-        const note = document.createElement('div');
-        note.className = 'progress-note';
-        note.textContent = task.done
-          ? 'All steps complete'
-          : `${doneCount} of ${task.subtasks.length} steps complete`;
-        titleWrap.appendChild(note);
-      }
-
       row.appendChild(titleWrap);
 
       const actions = document.createElement('div');
@@ -511,7 +611,32 @@
 
       card.appendChild(row);
 
-      // subtasks
+      // per-task progress bar (based on % of its subtasks completed)
+      if (task.subtasks.length > 0) {
+        const subPct = Math.round((doneCount / task.subtasks.length) * 100);
+
+        const progWrap = document.createElement('div');
+        progWrap.className = 'task-progress';
+
+        const track = document.createElement('div');
+        track.className = 'task-progress-track';
+        const fill = document.createElement('div');
+        fill.className = 'task-progress-fill';
+        fill.style.width = subPct + '%';
+        track.appendChild(fill);
+        progWrap.appendChild(track);
+
+        const note = document.createElement('div');
+        note.className = 'progress-note';
+        note.textContent = task.done
+          ? 'All steps complete'
+          : `${doneCount} of ${task.subtasks.length} steps complete (${subPct}%)`;
+        progWrap.appendChild(note);
+
+        card.appendChild(progWrap);
+      }
+
+      // subtasks (scrollable once the list gets long)
       if (task.subtasks.length > 0) {
         const subWrap = document.createElement('div');
         subWrap.className = 'subtasks';
@@ -555,7 +680,6 @@
       // add-subtask row
       const addSubRow = document.createElement('div');
       addSubRow.className = 'add-sub-row';
-      addSubRow.style.marginLeft = '30px';
       const subInput = document.createElement('input');
       subInput.type = 'text';
       subInput.placeholder = 'Add a step…';
