@@ -215,14 +215,20 @@
     flex-shrink: 0;
   }
   .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
     background: transparent;
     color: var(--muted);
     font-size: 0.85rem;
-    padding: 4px 8px;
+    padding: 5px 8px;
     border-radius: 6px;
   }
+  .icon-btn svg { display: block; }
   .icon-btn:hover { background: var(--accent-soft); color: var(--accent); }
   .icon-btn.danger:hover { background: #f7e6df; color: var(--danger); }
+  .order-toggle-btn.active { background: var(--accent-soft); color: var(--accent); }
 
   .subtasks {
     margin: 10px 0 4px;
@@ -237,11 +243,11 @@
   }
   .subtask-row {
     display: flex;
-    align-items: flex-start;
-    gap: 9px;
+    align-items: center;
+    gap: 7px;
   }
   .sub-checkbox {
-    margin-top: 2px;
+    margin-top: 0;
     width: 17px;
     height: 17px;
     flex-shrink: 0;
@@ -252,6 +258,8 @@
     align-items: center;
     justify-content: center;
     position: relative;
+    align-self: flex-start;
+    margin-top: 2px;
   }
   .sub-checkbox.done { background: var(--accent); }
   .sub-checkbox.done::after {
@@ -271,13 +279,42 @@
     font-variant-numeric: tabular-nums;
     font-size: 0.85rem;
     margin-right: 2px;
+    align-self: flex-start;
+    margin-top: 1px;
   }
   .sub-title {
     font-size: 0.9rem;
     flex: 1;
+    min-width: 0;
     word-break: break-word;
   }
   .sub-title.done { text-decoration: line-through; color: var(--muted); }
+
+  .repeat-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.66rem;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 2px 6px;
+    border-radius: 999px;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .repeat-btn {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s ease;
+    flex-shrink: 0;
+    padding: 4px 5px;
+  }
+  .subtask-row:hover .repeat-btn,
+  .repeat-btn:focus-visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .repeat-btn.active { color: var(--accent); }
 
   .add-sub-row {
     display: flex;
@@ -340,6 +377,8 @@
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s, transform 0.2s;
+    max-width: 90vw;
+    text-align: center;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
@@ -348,7 +387,7 @@
 <div class="app">
   <header>
     <h1>Step Tasks</h1>
-    <p class="subtitle">Break a task into steps. Steps unlock in order, and a task can't be checked off until every step is done.</p>
+    <p class="subtitle">Break a task into steps. By default steps unlock in order, and a task can't be checked off until every step is done — toggle the order icon on a task to allow its steps in any order.</p>
   </header>
 
   <div class="add-task-row">
@@ -387,8 +426,17 @@
 
 <script>
 (function () {
+  /* ---------- icons ---------- */
+  const ICONS = {
+    list: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"></line><line x1="10" y1="12" x2="21" y2="12"></line><line x1="10" y1="18" x2="21" y2="18"></line><line x1="4" y1="6" x2="4.01" y2="6"></line><line x1="4" y1="12" x2="4.01" y2="12"></line><line x1="4" y1="18" x2="4.01" y2="18"></line></svg>',
+    shuffle: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>',
+    repeat: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>'
+  };
+  const REPEAT_LABELS = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' };
+  const REPEAT_CYCLE = [null, 'daily', 'weekly', 'monthly'];
+
   /* ---------- state ---------- */
-  // tasks = [{ id, title, done, subtasks: [{ id, title, done }] }]
+  // tasks = [{ id, title, done, sequential, subtasks: [{ id, title, done, repeat, completedPeriod }] }]
   let tasks = [];
   let nextId = 1;
   const STORAGE_KEY = 'stepTasksData';
@@ -401,13 +449,14 @@
   function uid() { return nextId++; }
 
   function makeTask(title) {
-    return { id: uid(), title: title.trim(), done: false, subtasks: [] };
+    return { id: uid(), title: title.trim(), done: false, sequential: true, subtasks: [] };
   }
   function makeSubtask(title) {
-    return { id: uid(), title: title.trim(), done: false };
+    return { id: uid(), title: title.trim(), done: false, repeat: null, completedPeriod: null };
   }
 
   /* ---------- derived helpers ---------- */
+  function isSequential(task) { return task.sequential !== false; }
   function allSubtasksDone(task) {
     return task.subtasks.length === 0 || task.subtasks.every(s => s.done);
   }
@@ -417,6 +466,23 @@
       if (!task.subtasks[i].done) return i;
     }
     return task.subtasks.length; // all done
+  }
+
+  /* ---------- date / repeat period helpers ---------- */
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function dateKey(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+  function weekStartKey(d) {
+    const day = d.getDay(); // 0 = Sun .. 6 = Sat
+    const diffToMonday = (day === 0 ? -6 : 1 - day);
+    const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() + diffToMonday);
+    return dateKey(monday);
+  }
+  function monthKey(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; }
+  function getPeriodKey(date, freq) {
+    if (freq === 'daily') return dateKey(date);
+    if (freq === 'weekly') return weekStartKey(date);
+    if (freq === 'monthly') return monthKey(date);
+    return null;
   }
 
   /* ---------- actions ---------- */
@@ -475,32 +541,67 @@
     }
   }
 
+  function toggleTaskOrder(taskId) {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    const wasSequential = isSequential(task);
+    task.sequential = !wasSequential;
+    render();
+    toast(task.sequential
+      ? 'This task now requires steps in order.'
+      : 'This task now allows steps in any order.');
+  }
+
   function toggleSubtask(taskId, subId) {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
     const idx = task.subtasks.findIndex(s => s.id === subId);
     if (idx === -1) return;
     const sub = task.subtasks[idx];
+    const sequential = isSequential(task);
 
     if (!sub.done) {
-      // can only check if everything before it is already done
-      const priorDone = task.subtasks.slice(0, idx).every(s => s.done);
-      if (!priorDone) {
-        flashLocked(`sub-${taskId}-${subId}`);
-        toast('Complete the previous step first.');
-        return;
+      if (sequential) {
+        // can only check if everything before it is already done
+        const priorDone = task.subtasks.slice(0, idx).every(s => s.done);
+        if (!priorDone) {
+          flashLocked(`sub-${taskId}-${subId}`);
+          toast('Complete the previous step first.');
+          return;
+        }
       }
       sub.done = true;
-    } else {
+      sub.completedPeriod = sub.repeat ? getPeriodKey(new Date(), sub.repeat) : null;
+    } else if (sequential) {
       // unchecking a step un-checks it and every step after it,
       // to keep the order consistent
       for (let i = idx; i < task.subtasks.length; i++) {
         task.subtasks[i].done = false;
+        task.subtasks[i].completedPeriod = null;
       }
-      // task can no longer be considered done
+      task.done = false;
+    } else {
+      // any-order task: unchecking only affects this one step
+      sub.done = false;
+      sub.completedPeriod = null;
       task.done = false;
     }
     render();
+  }
+
+  function cycleRepeat(taskId, subId) {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    const sub = task.subtasks.find(s => s.id === subId);
+    if (!sub) return;
+    const idx = REPEAT_CYCLE.indexOf(sub.repeat || null);
+    const next = REPEAT_CYCLE[(idx + 1) % REPEAT_CYCLE.length];
+    sub.repeat = next;
+    sub.completedPeriod = (sub.repeat && sub.done) ? getPeriodKey(new Date(), sub.repeat) : null;
+    render();
+    toast(sub.repeat
+      ? `"${sub.title}" now repeats ${REPEAT_LABELS[sub.repeat].toLowerCase()}.`
+      : `"${sub.title}" no longer repeats.`);
   }
 
   function flashLocked(domId) {
@@ -518,7 +619,7 @@
     el.textContent = msg;
     el.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
   }
 
   /* ---------- persistence (this page runs as a normal hosted site, so
@@ -543,6 +644,38 @@
     } catch (e) {
       return false;
     }
+  }
+
+  /* ---------- repeating steps: reset any whose period has rolled over ---------- */
+  function applyRepeatResets() {
+    let changed = false;
+    const now = new Date();
+    tasks.forEach(task => {
+      let anyReset = false;
+      task.subtasks.forEach(sub => {
+        if (sub.repeat && sub.done) {
+          const currentPeriod = getPeriodKey(now, sub.repeat);
+          if (sub.completedPeriod !== currentPeriod) {
+            sub.done = false;
+            sub.completedPeriod = null;
+            anyReset = true;
+            changed = true;
+          }
+        }
+      });
+      if (anyReset) {
+        // keep the "no step done after an undone step" invariant for sequential tasks
+        if (isSequential(task)) {
+          let seenUndone = false;
+          task.subtasks.forEach(sub => {
+            if (!sub.done) { seenUndone = true; }
+            else if (seenUndone) { sub.done = false; sub.completedPeriod = null; }
+          });
+        }
+        task.done = false;
+      }
+    });
+    return changed;
   }
 
   /* ---------- overall progress bars ---------- */
@@ -574,6 +707,7 @@
     emptyStateEl.style.display = tasks.length === 0 ? 'block' : 'none';
 
     tasks.forEach((task, tIdx) => {
+      const sequential = isSequential(task);
       const card = document.createElement('div');
       card.className = 'task-card';
 
@@ -602,6 +736,16 @@
 
       const actions = document.createElement('div');
       actions.className = 'task-actions';
+
+      const orderBtn = document.createElement('button');
+      orderBtn.className = 'icon-btn order-toggle-btn' + (sequential ? '' : ' active');
+      orderBtn.innerHTML = ICONS[sequential ? 'list' : 'shuffle'];
+      orderBtn.title = sequential
+        ? 'Steps must be completed in order — click to allow any order'
+        : 'Steps can be completed in any order — click to require order';
+      orderBtn.addEventListener('click', () => toggleTaskOrder(task.id));
+      actions.appendChild(orderBtn);
+
       const delBtn = document.createElement('button');
       delBtn.className = 'icon-btn danger';
       delBtn.textContent = 'Delete';
@@ -646,7 +790,7 @@
           const subRow = document.createElement('div');
           subRow.className = 'subtask-row';
 
-          const subLocked = !sub.done && sIdx > unlockedIdx;
+          const subLocked = sequential && !sub.done && sIdx > unlockedIdx;
           const subCb = document.createElement('div');
           subCb.id = `sub-${task.id}-${sub.id}`;
           subCb.className = 'sub-checkbox' + (sub.done ? ' done' : '') + (subLocked ? ' locked' : '');
@@ -663,6 +807,23 @@
           subTitle.className = 'sub-title' + (sub.done ? ' done' : '');
           subTitle.textContent = sub.title;
           subRow.appendChild(subTitle);
+
+          if (sub.repeat) {
+            const badge = document.createElement('span');
+            badge.className = 'repeat-badge';
+            badge.innerHTML = ICONS.repeat + `<span>${REPEAT_LABELS[sub.repeat]}</span>`;
+            badge.title = `Repeats ${REPEAT_LABELS[sub.repeat].toLowerCase()} — resets automatically after each period`;
+            subRow.appendChild(badge);
+          }
+
+          const repeatBtn = document.createElement('button');
+          repeatBtn.className = 'icon-btn repeat-btn' + (sub.repeat ? ' active' : '');
+          repeatBtn.innerHTML = ICONS.repeat;
+          repeatBtn.title = sub.repeat
+            ? `Repeats ${REPEAT_LABELS[sub.repeat].toLowerCase()} — click to change`
+            : 'Click to make this step repeat (daily → weekly → monthly)';
+          repeatBtn.addEventListener('click', () => cycleRepeat(task.id, sub.id));
+          subRow.appendChild(repeatBtn);
 
           const subDel = document.createElement('button');
           subDel.className = 'icon-btn danger';
@@ -725,6 +886,7 @@
         if (!Array.isArray(parsed.tasks)) throw new Error('bad format');
         tasks = parsed.tasks;
         nextId = parsed.nextId || (Math.max(0, ...tasks.flatMap(t => [t.id, ...t.subtasks.map(s => s.id)])) + 1);
+        applyRepeatResets();
         render();
         toast('Tasks imported.');
       } catch (e) {
@@ -762,7 +924,16 @@
     tasks.push(seed);
   }
 
+  // catch any repeating steps that rolled over while the page was closed
+  applyRepeatResets();
   render();
+
+  // keep repeating steps honest while the page stays open: check every
+  // minute, and immediately whenever the tab becomes visible again
+  setInterval(() => { if (applyRepeatResets()) render(); }, 60000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && applyRepeatResets()) render();
+  });
 })();
 </script>
 </body>
