@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Step Tasks</title>
+<style>
+  :root {
+    --bg: #f6f5f3;
+    --card: #ffffff;
+    --ink: #1f2328;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --accent: #2f6f4f;
+    --accent-soft: #e6f2ec;
+    --locked: #c7ccd1;
+    --danger: #b3441e;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px 80px;
+  }
+  .app {
+    width: 100%;
+    max-width: 1440px;
+  }
+  header {
+    margin-bottom: 24px;
+  }
+  h1 {
+    font-size: 1.5rem;
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin: 0;
+  }
+
+  /* ---------- overall two-column layout: tasks + notes ---------- */
+  .layout {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .main-col {
+    flex: 1 1 640px;
+    min-width: 0;
+  }
+  .notes-col {
+    flex: 1 1 300px;
+    max-width: 360px;
+  }
+
+  .add-task-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    max-width: 640px;
+  }
+  .add-task-row input {
+    flex: 1;
+    padding: 11px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    font-size: 0.95rem;
+    background: var(--card);
+  }
+  .add-task-row input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    padding: 11px 18px;
+    border-radius: var(--radius);
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .btn-primary:hover { opacity: 0.92; }
+
+  /* ---------- overall progress ---------- */
+  .overview {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .overview-card {
+    flex: 1 1 240px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .overview-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .overview-label .name {
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .overview-label .stat {
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .bar-track {
+    height: 8px;
+    border-radius: 999px;
+    background: var(--line);
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 999px;
+    transition: width 0.25s ease;
+  }
+
+  /* ---------- grid of task cards: fixed 3 columns, capped to 2 visible
+     rows (6 tasks) — extra tasks scroll within the grid itself ---------- */
+  .task-list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-auto-rows: 400px;
+    gap: 16px;
+    max-height: 816px;
+    overflow-y: auto;
+    padding-right: 6px;
+  }
+  @media (max-width: 980px) {
+    .task-list { grid-template-columns: repeat(2, 1fr); max-height: none; }
+  }
+  @media (max-width: 620px) {
+    .task-list { grid-template-columns: 1fr; }
+  }
+
+  .task-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .task-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .checkbox {
+    margin-top: 2px;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    border-radius: 5px;
+    border: 2px solid var(--accent);
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, border-color 0.15s;
+    position: relative;
+  }
+  .checkbox.done { background: var(--accent); }
+  .checkbox.done::after {
+    content: "";
+    width: 5px;
+    height: 9px;
+    border-right: 2px solid white;
+    border-bottom: 2px solid white;
+    transform: rotate(45deg) translate(-1px, -1px);
+  }
+  .checkbox.locked {
+    border-color: var(--locked);
+    cursor: not-allowed;
+  }
+  .checkbox.locked::after {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--locked);
+  }
+  .checkbox.shake { animation: shake 0.35s; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+
+  .task-title-wrap { flex: 1; min-width: 0; }
+  .task-title {
+    font-size: 1rem;
+    font-weight: 600;
+    word-break: break-word;
+    cursor: text;
+  }
+  .task-title.done { text-decoration: line-through; color: var(--muted); font-weight: 500; }
+  .title-edit-input {
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: inherit;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 2px 6px;
+    width: 100%;
+    background: var(--card);
+    color: var(--ink);
+  }
+
+  .task-progress { margin: 10px 0 2px; }
+  .task-progress-track {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--line);
+    overflow: hidden;
+  }
+  .task-progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 999px;
+    transition: width 0.25s ease;
+  }
+  .progress-note {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 5px;
+  }
+
+  .task-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.85rem;
+    padding: 5px 8px;
+    border-radius: 6px;
+  }
+  .icon-btn svg { display: block; }
+  .icon-btn:hover { background: var(--accent-soft); color: var(--accent); }
+  .icon-btn.danger:hover { background: #f7e6df; color: var(--danger); }
+  .order-toggle-btn.active { background: var(--accent-soft); color: var(--accent); }
+
+  .subtasks {
+    margin: 10px 0 4px;
+    padding-left: 14px;
+    padding-right: 6px;
+    border-left: 2px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 210px;
+    overflow-y: auto;
+  }
+  .subtask-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .sub-checkbox {
+    margin-top: 0;
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    border: 2px solid var(--accent);
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    align-self: flex-start;
+    margin-top: 2px;
+  }
+  .sub-checkbox.done { background: var(--accent); }
+  .sub-checkbox.done::after {
+    content: "";
+    width: 4px;
+    height: 8px;
+    border-right: 2px solid white;
+    border-bottom: 2px solid white;
+    transform: rotate(45deg) translate(-1px, -1px);
+  }
+  .sub-checkbox.locked {
+    border-color: var(--locked);
+    cursor: not-allowed;
+  }
+  .sub-label-num {
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.85rem;
+    margin-right: 2px;
+    align-self: flex-start;
+    margin-top: 1px;
+  }
+  .sub-title {
+    font-size: 0.9rem;
+    flex: 1;
+    min-width: 0;
+    word-break: break-word;
+    cursor: text;
+  }
+  .sub-title.done { text-decoration: line-through; color: var(--muted); }
+  .sub-title-edit-input {
+    font-size: 0.9rem;
+    font-family: inherit;
+    border: 1px solid var(--accent);
+    border-radius: 5px;
+    padding: 1px 5px;
+    flex: 1;
+    min-width: 0;
+    background: var(--card);
+    color: var(--ink);
+  }
+
+  .repeat-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.66rem;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 2px 6px;
+    border-radius: 999px;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .repeat-btn {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s ease;
+    flex-shrink: 0;
+    padding: 4px 5px;
+  }
+  .subtask-row:hover .repeat-btn,
+  .repeat-btn:focus-visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .repeat-btn.active { color: var(--accent); }
+
+  .add-sub-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .add-sub-row input {
+    flex: 1;
+    min-width: 0;
+    padding: 7px 10px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    font-size: 0.85rem;
+  }
+  .add-sub-row button {
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 7px 12px;
+    border-radius: 7px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .empty-state {
+    text-align: center;
+    color: var(--muted);
+    padding: 40px 0;
+    font-size: 0.9rem;
+  }
+
+  .toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 28px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+  }
+  .toolbar button {
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.8rem;
+    padding: 7px 10px;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+  }
+  .toolbar button:hover { color: var(--ink); background: var(--accent-soft); border-color: var(--accent-soft); }
+
+  /* ---------- notes panel ---------- */
+  .notes-panel {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    height: 816px;
+  }
+  .notes-panel h2 {
+    font-size: 0.95rem;
+    margin: 0 0 4px;
+  }
+  .notes-panel .notes-hint {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin: 0 0 10px;
+  }
+  .notes-panel textarea {
+    flex: 1;
+    width: 100%;
+    resize: none;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--ink);
+    background: var(--bg);
+  }
+  .notes-panel textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  @media (max-width: 980px) {
+    .notes-col { max-width: none; }
+    .notes-panel { height: 420px; }
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--ink);
+    color: white;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    max-width: 90vw;
+    text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Step Tasks</h1>
+    <p class="subtitle">Break a task into steps. By default steps unlock in order, and a task can't be checked off until every step is done — toggle the order icon on a task to allow its steps in any order. Click any task or step name to rename it.</p>
+  </header>
+
+  <div class="layout">
+    <div class="main-col">
+      <div class="add-task-row">
+        <input type="text" id="newTaskInput" placeholder="Add a new task, e.g. Get ready" maxlength="200">
+        <button class="btn-primary" id="addTaskBtn">Add task</button>
+      </div>
+
+      <div class="overview" id="overview">
+        <div class="overview-card">
+          <div class="overview-label">
+            <span class="name">Tasks completed</span>
+            <span class="stat" id="overviewTasksStat">0/0 · 0%</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill" id="overviewTasksFill" style="width:0%"></div></div>
+        </div>
+        <div class="overview-card">
+          <div class="overview-label">
+            <span class="name">Steps completed</span>
+            <span class="stat" id="overviewStepsStat">0/0 · 0%</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill" id="overviewStepsFill" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <div class="task-list" id="taskList"></div>
+      <div class="empty-state" id="emptyState" style="display:none;">No tasks yet. Add one above to get started.</div>
+
+      <div class="toolbar">
+        <button id="exportBtn" title="Save your tasks and notes to a file on your computer">Export tasks</button>
+        <button id="importBtn" title="Load tasks and notes from a previously exported file">Import tasks</button>
+        <input type="file" id="importFile" accept="application/json" style="display:none;">
+      </div>
+    </div>
+
+    <aside class="notes-col">
+      <div class="notes-panel">
+        <h2>Notes</h2>
+        <p class="notes-hint">Jot down notes, paste links — saved automatically.</p>
+        <textarea id="notesArea" placeholder="Anything you want to keep close by: links, context, scratch notes…"></textarea>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  /* ---------- icons ---------- */
+  const ICONS = {
+    list: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"></line><line x1="10" y1="12" x2="21" y2="12"></line><line x1="10" y1="18" x2="21" y2="18"></line><line x1="4" y1="6" x2="4.01" y2="6"></line><line x1="4" y1="12" x2="4.01" y2="12"></line><line x1="4" y1="18" x2="4.01" y2="18"></line></svg>',
+    shuffle: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>',
+    repeat: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>'
+  };
+  const REPEAT_LABELS = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' };
+  const REPEAT_CYCLE = [null, 'daily', 'weekly', 'monthly'];
+
+  /* ---------- state ---------- */
+  // tasks = [{ id, title, done, sequential, subtasks: [{ id, title, done, repeat, completedPeriod }] }]
+  let tasks = [];
+  let nextId = 1;
+  let notes = '';
+  let editing = null; // { type: 'task', taskId } or { type: 'sub', taskId, subId }
+  const STORAGE_KEY = 'stepTasksData';
+
+  const taskListEl = document.getElementById('taskList');
+  const emptyStateEl = document.getElementById('emptyState');
+  const overviewEl = document.getElementById('overview');
+  const newTaskInput = document.getElementById('newTaskInput');
+  const notesArea = document.getElementById('notesArea');
+
+  function uid() { return nextId++; }
+
+  function makeTask(title) {
+    return { id: uid(), title: title.trim(), done: false, sequential: true, subtasks: [] };
+  }
+  function makeSubtask(title) {
+    return { id: uid(), title: title.trim(), done: false, repeat: null, completedPeriod: null };
+  }
+
+  /* ---------- derived helpers ---------- */
+  function isSequential(task) { return task.sequential !== false; }
+  function allSubtasksDone(task) {
+    return task.subtasks.length === 0 || task.subtasks.every(s => s.done);
+  }
+  function firstUnlockedIndex(task) {
+    // the index of the first subtask that is not yet done (i.e. next one that can be checked)
+    for (let i = 0; i < task.subtasks.length; i++) {
+      if (!task.subtasks[i].done) return i;
+    }
+    return task.subtasks.length; // all done
+  }
+
+  /* ---------- date / repeat period helpers ---------- */
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function dateKey(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+  function weekStartKey(d) {
+    const day = d.getDay(); // 0 = Sun .. 6 = Sat
+    const diffToMonday = (day === 0 ? -6 : 1 - day);
+    const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() + diffToMonday);
+    return dateKey(monday);
+  }
+  function monthKey(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; }
+  function getPeriodKey(date, freq) {
+    if (freq === 'daily') return dateKey(date);
+    if (freq === 'weekly') return weekStartKey(date);
+    if (freq === 'monthly') return monthKey(date);
+    return null;
+  }
+
+  /* ---------- inline-edit helper ----------
+     Wires an <input> so Enter commits, Escape cancels, and clicking away
+     (blur) commits — same as most inline-rename UIs. */
+  function attachEditableInput(input, onCommit, onCancel) {
+    let decided = false;
+    function finish(cancelled) {
+      if (decided) return;
+      decided = true;
+      if (cancelled) onCancel(); else onCommit(input.value);
+    }
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); finish(false); input.blur(); }
+      else if (e.key === 'Escape') { e.preventDefault(); finish(true); input.blur(); }
+    });
+    input.addEventListener('blur', () => finish(false));
+  }
+
+  function startEditTask(taskId) { editing = { type: 'task', taskId }; render(); }
+  function startEditSub(taskId, subId) { editing = { type: 'sub', taskId, subId }; render(); }
+  function cancelEdit() { editing = null; render(); }
+  function commitTaskEdit(taskId, value) {
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+      const v = value.trim();
+      if (v) task.title = v;
+    }
+    editing = null;
+    render();
+  }
+  function commitSubEdit(taskId, subId, value) {
+    const task = tasks.find(t => t.id === taskId);
+    const sub = task && task.subtasks.find(s => s.id === subId);
+    if (sub) {
+      const v = value.trim();
+      if (v) sub.title = v;
+    }
+    editing = null;
+    render();
+  }
+
+  /* ---------- actions ---------- */
+  function addTask(title) {
+    if (!title || !title.trim()) return;
+    tasks.push(makeTask(title));
+    render();
+  }
+
+  function addSubtask(taskId, title) {
+    if (!title || !title.trim()) return;
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    task.subtasks.push(makeSubtask(title));
+    // adding a new step after the task was already completed reopens it
+    if (task.done) task.done = false;
+    render();
+  }
+
+  function deleteTask(taskId) {
+    tasks = tasks.filter(t => t.id !== taskId);
+    render();
+  }
+
+  function deleteSubtask(taskId, subId) {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    task.subtasks = task.subtasks.filter(s => s.id !== subId);
+    if (task.done && !allSubtasksDone(task)) task.done = false;
+    render();
+  }
+
+  function toggleTask(taskId) {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    if (task.subtasks.length === 0) {
+      task.done = !task.done;
+      render();
+      return;
+    }
+
+    if (task.done) {
+      // always allow reopening a finished task
+      task.done = false;
+      render();
+      return;
+    }
+
+    if (allSubtasksDone(task)) {
+      task.done = true;
+      render();
+    } else {
+      flashLocked(`task-${taskId}`);
+      toast('Finish every step before checking off this task.');
+    }
+  }
+
+  function toggleTaskOrder(taskId) {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    const wasSequential = isSequential(task);
+    task.sequential = !wasSequential;
+    render();
+    toast(task.sequential
+      ? 'This task now requires steps in order.'
+      : 'This task now allows steps in any order.');
+  }
+
+  function toggleSubtask(taskId, subId) {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    const idx = task.subtasks.findIndex(s => s.id === subId);
+    if (idx === -1) return;
+    const sub = task.subtasks[idx];
+    const sequential = isSequential(task);
+
+    if (!sub.done) {
+      if (sequential) {
+        // can only check if everything before it is already done
+        const priorDone = task.subtasks.slice(0, idx).every(s => s.done);
+        if (!priorDone) {
+          flashLocked(`sub-${taskId}-${subId}`);
+          toast('Complete the previous step first.');
+          return;
+        }
+      }
+      sub.done = true;
+      sub.completedPeriod = sub.repeat ? getPeriodKey(new Date(), sub.repeat) : null;
+    } else if (sequential) {
+      // unchecking a step un-checks it and every step after it,
+      // to keep the order consistent
+      for (let i = idx; i < task.subtasks.length; i++) {
+        task.subtasks[i].done = false;
+        task.subtasks[i].completedPeriod = null;
+      }
+      task.done = false;
+    } else {
+      // any-order task: unchecking only affects this one step
+      sub.done = false;
+      sub.completedPeriod = null;
+      task.done = false;
+    }
+    render();
+  }
+
+  function cycleRepeat(taskId, subId) {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    const sub = task.subtasks.find(s => s.id === subId);
+    if (!sub) return;
+    const idx = REPEAT_CYCLE.indexOf(sub.repeat || null);
+    const next = REPEAT_CYCLE[(idx + 1) % REPEAT_CYCLE.length];
+    sub.repeat = next;
+    sub.completedPeriod = (sub.repeat && sub.done) ? getPeriodKey(new Date(), sub.repeat) : null;
+    render();
+    toast(sub.repeat
+      ? `"${sub.title}" now repeats ${REPEAT_LABELS[sub.repeat].toLowerCase()}.`
+      : `"${sub.title}" no longer repeats.`);
+  }
+
+  function flashLocked(domId) {
+    requestAnimationFrame(() => {
+      const el = document.getElementById(domId);
+      if (!el) return;
+      el.classList.add('shake');
+      setTimeout(() => el.classList.remove('shake'), 350);
+    });
+  }
+
+  let toastTimer = null;
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+  }
+
+  /* ---------- persistence (this page runs as a normal hosted site, so
+     localStorage is safe here and keeps your list saved between visits) ---------- */
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ tasks, nextId, notes }));
+    } catch (e) {
+      // storage unavailable (e.g. private browsing) — silently skip
+    }
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed.tasks)) return false;
+      tasks = parsed.tasks;
+      nextId = parsed.nextId || 1;
+      notes = typeof parsed.notes === 'string' ? parsed.notes : '';
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /* ---------- repeating steps: reset any whose period has rolled over ---------- */
+  function applyRepeatResets() {
+    let changed = false;
+    const now = new Date();
+    tasks.forEach(task => {
+      let anyReset = false;
+      task.subtasks.forEach(sub => {
+        if (sub.repeat && sub.done) {
+          const currentPeriod = getPeriodKey(now, sub.repeat);
+          if (sub.completedPeriod !== currentPeriod) {
+            sub.done = false;
+            sub.completedPeriod = null;
+            anyReset = true;
+            changed = true;
+          }
+        }
+      });
+      if (anyReset) {
+        // keep the "no step done after an undone step" invariant for sequential tasks
+        if (isSequential(task)) {
+          let seenUndone = false;
+          task.subtasks.forEach(sub => {
+            if (!sub.done) { seenUndone = true; }
+            else if (seenUndone) { sub.done = false; sub.completedPeriod = null; }
+          });
+        }
+        task.done = false;
+      }
+    });
+    return changed;
+  }
+
+  /* ---------- overall progress bars ---------- */
+  function renderOverview() {
+    overviewEl.style.display = tasks.length === 0 ? 'none' : 'flex';
+
+    const totalTasks = tasks.length;
+    const doneTasks = tasks.filter(t => t.done).length;
+    let totalSubs = 0, doneSubs = 0;
+    tasks.forEach(t => {
+      totalSubs += t.subtasks.length;
+      doneSubs += t.subtasks.filter(s => s.done).length;
+    });
+
+    const taskPct = totalTasks ? Math.round((doneTasks / totalTasks) * 100) : 0;
+    const subPct = totalSubs ? Math.round((doneSubs / totalSubs) * 100) : 0;
+
+    document.getElementById('overviewTasksFill').style.width = taskPct + '%';
+    document.getElementById('overviewTasksStat').textContent = `${doneTasks}/${totalTasks} · ${taskPct}%`;
+    document.getElementById('overviewStepsFill').style.width = subPct + '%';
+    document.getElementById('overviewStepsStat').textContent = `${doneSubs}/${totalSubs} · ${subPct}%`;
+  }
+
+  /* ---------- rendering ---------- */
+  function render() {
+    saveState();
+    renderOverview();
+    taskListEl.innerHTML = '';
+    emptyStateEl.style.display = tasks.length === 0 ? 'block' : 'none';
+
+    tasks.forEach((task, tIdx) => {
+      const sequential = isSequential(task);
+      const card = document.createElement('div');
+      card.className = 'task-card';
+
+      const locked = task.subtasks.length > 0 && !task.done && !allSubtasksDone(task);
+      const doneCount = task.subtasks.filter(s => s.done).length;
+
+      const row = document.createElement('div');
+      row.className = 'task-row';
+
+      const cb = document.createElement('div');
+      cb.id = `task-${task.id}`;
+      cb.className = 'checkbox' + (task.done ? ' done' : '') + (locked ? ' locked' : '');
+      cb.title = locked ? 'Complete all steps first' : (task.done ? 'Mark as not done' : 'Mark as done');
+      cb.addEventListener('click', () => toggleTask(task.id));
+      row.appendChild(cb);
+
+      const titleWrap = document.createElement('div');
+      titleWrap.className = 'task-title-wrap';
+
+      const isEditingThisTask = editing && editing.type === 'task' && editing.taskId === task.id;
+      if (isEditingThisTask) {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'title-edit-input';
+        input.value = task.title;
+        input.maxLength = 200;
+        attachEditableInput(input, val => commitTaskEdit(task.id, val), cancelEdit);
+        titleWrap.appendChild(input);
+        input.focus();
+        input.select();
+      } else {
+        const titleEl = document.createElement('div');
+        titleEl.className = 'task-title' + (task.done ? ' done' : '');
+        titleEl.textContent = `${tIdx + 1}. ${task.title}`;
+        titleEl.title = 'Click to rename';
+        titleEl.addEventListener('click', () => startEditTask(task.id));
+        titleWrap.appendChild(titleEl);
+      }
+
+      row.appendChild(titleWrap);
+
+      const actions = document.createElement('div');
+      actions.className = 'task-actions';
+
+      const orderBtn = document.createElement('button');
+      orderBtn.className = 'icon-btn order-toggle-btn' + (sequential ? '' : ' active');
+      orderBtn.innerHTML = ICONS[sequential ? 'list' : 'shuffle'];
+      orderBtn.title = sequential
+        ? 'Steps must be completed in order — click to allow any order'
+        : 'Steps can be completed in any order — click to require order';
+      orderBtn.addEventListener('click', () => toggleTaskOrder(task.id));
+      actions.appendChild(orderBtn);
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'icon-btn danger';
+      delBtn.textContent = 'Delete';
+      delBtn.addEventListener('click', () => deleteTask(task.id));
+      actions.appendChild(delBtn);
+      row.appendChild(actions);
+
+      card.appendChild(row);
+
+      // per-task progress bar (based on % of its subtasks completed)
+      if (task.subtasks.length > 0) {
+        const subPct = Math.round((doneCount / task.subtasks.length) * 100);
+
+        const progWrap = document.createElement('div');
+        progWrap.className = 'task-progress';
+
+        const track = document.createElement('div');
+        track.className = 'task-progress-track';
+        const fill = document.createElement('div');
+        fill.className = 'task-progress-fill';
+        fill.style.width = subPct + '%';
+        track.appendChild(fill);
+        progWrap.appendChild(track);
+
+        const note = document.createElement('div');
+        note.className = 'progress-note';
+        note.textContent = task.done
+          ? 'All steps complete'
+          : `${doneCount} of ${task.subtasks.length} steps complete (${subPct}%)`;
+        progWrap.appendChild(note);
+
+        card.appendChild(progWrap);
+      }
+
+      // subtasks (scrollable once the list gets long)
+      if (task.subtasks.length > 0) {
+        const subWrap = document.createElement('div');
+        subWrap.className = 'subtasks';
+        const unlockedIdx = firstUnlockedIndex(task);
+
+        task.subtasks.forEach((sub, sIdx) => {
+          const subRow = document.createElement('div');
+          subRow.className = 'subtask-row';
+
+          const subLocked = sequential && !sub.done && sIdx > unlockedIdx;
+          const subCb = document.createElement('div');
+          subCb.id = `sub-${task.id}-${sub.id}`;
+          subCb.className = 'sub-checkbox' + (sub.done ? ' done' : '') + (subLocked ? ' locked' : '');
+          subCb.title = subLocked ? 'Complete the previous step first' : (sub.done ? 'Mark as not done' : 'Mark as done');
+          subCb.addEventListener('click', () => toggleSubtask(task.id, sub.id));
+          subRow.appendChild(subCb);
+
+          const num = document.createElement('span');
+          num.className = 'sub-label-num';
+          num.textContent = `${tIdx + 1}.${sIdx + 1}`;
+          subRow.appendChild(num);
+
+          const isEditingThisSub = editing && editing.type === 'sub' && editing.taskId === task.id && editing.subId === sub.id;
+          if (isEditingThisSub) {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'sub-title-edit-input';
+            input.value = sub.title;
+            input.maxLength = 160;
+            attachEditableInput(input, val => commitSubEdit(task.id, sub.id, val), cancelEdit);
+            subRow.appendChild(input);
+            input.focus();
+            input.select();
+          } else {
+            const subTitle = document.createElement('span');
+            subTitle.className = 'sub-title' + (sub.done ? ' done' : '');
+            subTitle.textContent = sub.title;
+            subTitle.title = 'Click to rename';
+            subTitle.addEventListener('click', () => startEditSub(task.id, sub.id));
+            subRow.appendChild(subTitle);
+          }
+
+          if (sub.repeat) {
+            const badge = document.createElement('span');
+            badge.className = 'repeat-badge';
+            badge.innerHTML = ICONS.repeat + `<span>${REPEAT_LABELS[sub.repeat]}</span>`;
+            badge.title = `Repeats ${REPEAT_LABELS[sub.repeat].toLowerCase()} — resets automatically after each period`;
+            subRow.appendChild(badge);
+          }
+
+          const repeatBtn = document.createElement('button');
+          repeatBtn.className = 'icon-btn repeat-btn' + (sub.repeat ? ' active' : '');
+          repeatBtn.innerHTML = ICONS.repeat;
+          repeatBtn.title = sub.repeat
+            ? `Repeats ${REPEAT_LABELS[sub.repeat].toLowerCase()} — click to change`
+            : 'Click to make this step repeat (daily → weekly → monthly)';
+          repeatBtn.addEventListener('click', () => cycleRepeat(task.id, sub.id));
+          subRow.appendChild(repeatBtn);
+
+          const subDel = document.createElement('button');
+          subDel.className = 'icon-btn danger';
+          subDel.textContent = '✕';
+          subDel.title = 'Delete step';
+          subDel.addEventListener('click', () => deleteSubtask(task.id, sub.id));
+          subRow.appendChild(subDel);
+
+          subWrap.appendChild(subRow);
+        });
+
+        card.appendChild(subWrap);
+      }
+
+      // add-subtask row
+      const addSubRow = document.createElement('div');
+      addSubRow.className = 'add-sub-row';
+      const subInput = document.createElement('input');
+      subInput.type = 'text';
+      subInput.placeholder = 'Add a step…';
+      subInput.maxLength = 160;
+      const subAddBtn = document.createElement('button');
+      subAddBtn.textContent = 'Add step';
+      function submitSub() {
+        addSubtask(task.id, subInput.value);
+        subInput.value = '';
+        subInput.focus();
+      }
+      subAddBtn.addEventListener('click', submitSub);
+      subInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitSub(); });
+      addSubRow.appendChild(subInput);
+      addSubRow.appendChild(subAddBtn);
+      card.appendChild(addSubRow);
+
+      taskListEl.appendChild(card);
+    });
+  }
+
+  /* ---------- import / export ---------- */
+  function exportTasks() {
+    const data = JSON.stringify({ tasks, nextId, notes }, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `step-tasks-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast('Tasks exported.');
+  }
+
+  function importTasks(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        if (!Array.isArray(parsed.tasks)) throw new Error('bad format');
+        tasks = parsed.tasks;
+        nextId = parsed.nextId || (Math.max(0, ...tasks.flatMap(t => [t.id, ...t.subtasks.map(s => s.id)])) + 1);
+        notes = typeof parsed.notes === 'string' ? parsed.notes : notes;
+        notesArea.value = notes;
+        applyRepeatResets();
+        render();
+        toast('Tasks imported.');
+      } catch (e) {
+        toast('Could not read that file.');
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  /* ---------- wire up ---------- */
+  document.getElementById('addTaskBtn').addEventListener('click', () => {
+    addTask(newTaskInput.value);
+    newTaskInput.value = '';
+    newTaskInput.focus();
+  });
+  newTaskInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      addTask(newTaskInput.value);
+      newTaskInput.value = '';
+    }
+  });
+
+  document.getElementById('exportBtn').addEventListener('click', exportTasks);
+  document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
+  document.getElementById('importFile').addEventListener('change', e => {
+    if (e.target.files[0]) importTasks(e.target.files[0]);
+    e.target.value = '';
+  });
+
+  notesArea.addEventListener('input', () => {
+    notes = notesArea.value;
+    saveState();
+  });
+
+  /* ---------- seed example (only if nothing saved yet) ---------- */
+  const restored = loadState();
+  if (!restored) {
+    const seed = makeTask('Get ready');
+    seed.subtasks = [makeSubtask('Take a shower'), makeSubtask('Dry my hair'), makeSubtask('Iron my clothes')];
+    tasks.push(seed);
+  }
+  notesArea.value = notes;
+
+  // catch any repeating steps that rolled over while the page was closed
+  applyRepeatResets();
+  render();
+
+  // keep repeating steps honest while the page stays open: check every
+  // minute, and immediately whenever the tab becomes visible again
+  setInterval(() => { if (applyRepeatResets()) render(); }, 60000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && applyRepeatResets()) render();
+  });
+})();
+</script>
+</body>
+</html>
