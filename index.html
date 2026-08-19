@@ -25,54 +25,69 @@
     color: var(--ink);
     display: flex;
     justify-content: center;
-    padding: 40px 16px 80px;
+    padding: 34px 16px 70px;
   }
   .app {
     width: 100%;
-    max-width: 1440px;
+    max-width: 1400px;
   }
   header {
-    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
   }
   h1 {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     margin: 0 0 4px;
     letter-spacing: -0.01em;
   }
   .subtitle {
     color: var(--muted);
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     margin: 0;
+    max-width: 640px;
   }
 
-  /* ---------- overall two-column layout: tasks + notes ---------- */
-  .layout {
-    display: flex;
-    gap: 24px;
-    align-items: flex-start;
-    flex-wrap: wrap;
+  /* ---------- board toggle (Work / Personal) ---------- */
+  .board-toggle {
+    display: inline-flex;
+    background: var(--line);
+    border-radius: 999px;
+    padding: 3px;
+    gap: 2px;
+    flex-shrink: 0;
   }
-  .main-col {
-    flex: 1 1 640px;
-    min-width: 0;
+  .board-btn {
+    border: none;
+    background: transparent;
+    padding: 7px 14px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    font-family: inherit;
   }
-  .notes-col {
-    flex: 1 1 300px;
-    max-width: 360px;
+  .board-btn.active {
+    background: var(--accent);
+    color: white;
   }
 
   .add-task-row {
     display: flex;
     gap: 8px;
-    margin-bottom: 20px;
-    max-width: 640px;
+    margin-bottom: 18px;
+    max-width: 540px;
   }
   .add-task-row input {
     flex: 1;
-    padding: 11px 14px;
+    padding: 9px 12px;
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    font-size: 0.95rem;
+    font-size: 0.8rem;
     background: var(--card);
   }
   .add-task-row input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -84,9 +99,9 @@
   .btn-primary {
     background: var(--accent);
     color: white;
-    padding: 11px 18px;
+    padding: 9px 15px;
     border-radius: var(--radius);
-    font-size: 0.9rem;
+    font-size: 0.78rem;
     font-weight: 600;
     white-space: nowrap;
   }
@@ -95,34 +110,34 @@
   /* ---------- overall progress ---------- */
   .overview {
     display: flex;
-    gap: 14px;
-    margin-bottom: 24px;
+    gap: 12px;
+    margin-bottom: 20px;
     flex-wrap: wrap;
   }
   .overview-card {
-    flex: 1 1 240px;
+    flex: 1 1 220px;
     background: var(--card);
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    padding: 14px 16px;
+    padding: 12px 14px;
   }
   .overview-label {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    margin-bottom: 8px;
+    margin-bottom: 7px;
   }
   .overview-label .name {
-    font-size: 0.85rem;
+    font-size: 0.72rem;
     font-weight: 600;
   }
   .overview-label .stat {
-    font-size: 0.8rem;
+    font-size: 0.68rem;
     color: var(--muted);
     font-variant-numeric: tabular-nums;
   }
   .bar-track {
-    height: 8px;
+    height: 7px;
     border-radius: 999px;
     background: var(--line);
     overflow: hidden;
@@ -134,14 +149,31 @@
     transition: width 0.25s ease;
   }
 
+  /* ---------- layout: task grid (left) + notes panel (right),
+     tops aligned since both are direct children of .layout ---------- */
+  .layout {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .main-col {
+    flex: 1 1 540px;
+    min-width: 0;
+  }
+  .notes-col {
+    flex: 1 1 260px;
+    max-width: 310px;
+  }
+
   /* ---------- grid of task cards: fixed 3 columns, capped to 2 visible
      rows (6 tasks) — extra tasks scroll within the grid itself ---------- */
   .task-list {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    grid-auto-rows: 400px;
-    gap: 16px;
-    max-height: 816px;
+    grid-auto-rows: 340px;
+    gap: 14px;
+    max-height: 694px;
     overflow-y: auto;
     padding-right: 6px;
   }
@@ -156,7 +188,7 @@
     background: var(--card);
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    padding: 14px 16px;
+    padding: 12px 14px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -165,13 +197,13 @@
   .task-row {
     display: flex;
     align-items: flex-start;
-    gap: 10px;
+    gap: 9px;
   }
 
   .checkbox {
     margin-top: 2px;
-    width: 20px;
-    height: 20px;
+    width: 17px;
+    height: 17px;
     flex-shrink: 0;
     border-radius: 5px;
     border: 2px solid var(--accent);
@@ -185,8 +217,8 @@
   .checkbox.done { background: var(--accent); }
   .checkbox.done::after {
     content: "";
-    width: 5px;
-    height: 9px;
+    width: 4px;
+    height: 8px;
     border-right: 2px solid white;
     border-bottom: 2px solid white;
     transform: rotate(45deg) translate(-1px, -1px);
@@ -197,8 +229,8 @@
   }
   .checkbox.locked::after {
     content: "";
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
     background: var(--locked);
   }
@@ -211,27 +243,27 @@
 
   .task-title-wrap { flex: 1; min-width: 0; }
   .task-title {
-    font-size: 1rem;
+    font-size: 0.85rem;
     font-weight: 600;
     word-break: break-word;
     cursor: text;
   }
   .task-title.done { text-decoration: line-through; color: var(--muted); font-weight: 500; }
   .title-edit-input {
-    font-size: 1rem;
+    font-size: 0.85rem;
     font-weight: 600;
     font-family: inherit;
     border: 1px solid var(--accent);
     border-radius: 6px;
-    padding: 2px 6px;
+    padding: 2px 5px;
     width: 100%;
     background: var(--card);
     color: var(--ink);
   }
 
-  .task-progress { margin: 10px 0 2px; }
+  .task-progress { margin: 8px 0 2px; }
   .task-progress-track {
-    height: 6px;
+    height: 5px;
     border-radius: 999px;
     background: var(--line);
     overflow: hidden;
@@ -243,25 +275,25 @@
     transition: width 0.25s ease;
   }
   .progress-note {
-    font-size: 0.78rem;
+    font-size: 0.68rem;
     color: var(--muted);
-    margin-top: 5px;
+    margin-top: 4px;
   }
 
   .task-actions {
     display: flex;
-    gap: 6px;
+    gap: 5px;
     flex-shrink: 0;
   }
   .icon-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: 3px;
     background: transparent;
     color: var(--muted);
-    font-size: 0.85rem;
-    padding: 5px 8px;
+    font-size: 0.72rem;
+    padding: 4px 7px;
     border-radius: 6px;
   }
   .icon-btn svg { display: block; }
@@ -270,25 +302,25 @@
   .order-toggle-btn.active { background: var(--accent-soft); color: var(--accent); }
 
   .subtasks {
-    margin: 10px 0 4px;
-    padding-left: 14px;
-    padding-right: 6px;
+    margin: 8px 0 4px;
+    padding-left: 12px;
+    padding-right: 5px;
     border-left: 2px solid var(--line);
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    max-height: 210px;
+    gap: 7px;
+    max-height: 178px;
     overflow-y: auto;
   }
   .subtask-row {
     display: flex;
     align-items: center;
-    gap: 7px;
+    gap: 6px;
   }
   .sub-checkbox {
     margin-top: 0;
-    width: 17px;
-    height: 17px;
+    width: 14px;
+    height: 14px;
     flex-shrink: 0;
     border-radius: 4px;
     border: 2px solid var(--accent);
@@ -303,8 +335,8 @@
   .sub-checkbox.done { background: var(--accent); }
   .sub-checkbox.done::after {
     content: "";
-    width: 4px;
-    height: 8px;
+    width: 3px;
+    height: 7px;
     border-right: 2px solid white;
     border-bottom: 2px solid white;
     transform: rotate(45deg) translate(-1px, -1px);
@@ -316,13 +348,13 @@
   .sub-label-num {
     color: var(--muted);
     font-variant-numeric: tabular-nums;
-    font-size: 0.85rem;
-    margin-right: 2px;
+    font-size: 0.72rem;
+    margin-right: 1px;
     align-self: flex-start;
     margin-top: 1px;
   }
   .sub-title {
-    font-size: 0.9rem;
+    font-size: 0.78rem;
     flex: 1;
     min-width: 0;
     word-break: break-word;
@@ -330,11 +362,11 @@
   }
   .sub-title.done { text-decoration: line-through; color: var(--muted); }
   .sub-title-edit-input {
-    font-size: 0.9rem;
+    font-size: 0.78rem;
     font-family: inherit;
     border: 1px solid var(--accent);
     border-radius: 5px;
-    padding: 1px 5px;
+    padding: 1px 4px;
     flex: 1;
     min-width: 0;
     background: var(--card);
@@ -344,11 +376,11 @@
   .repeat-badge {
     display: inline-flex;
     align-items: center;
-    gap: 3px;
-    font-size: 0.66rem;
+    gap: 2px;
+    font-size: 0.58rem;
     color: var(--accent);
     background: var(--accent-soft);
-    padding: 2px 6px;
+    padding: 2px 5px;
     border-radius: 999px;
     flex-shrink: 0;
     white-space: nowrap;
@@ -358,7 +390,7 @@
     pointer-events: none;
     transition: opacity 0.12s ease;
     flex-shrink: 0;
-    padding: 4px 5px;
+    padding: 3px 4px;
   }
   .subtask-row:hover .repeat-btn,
   .repeat-btn:focus-visible {
@@ -369,23 +401,23 @@
 
   .add-sub-row {
     display: flex;
-    gap: 6px;
-    margin-top: 10px;
+    gap: 5px;
+    margin-top: 8px;
   }
   .add-sub-row input {
     flex: 1;
     min-width: 0;
-    padding: 7px 10px;
+    padding: 6px 9px;
     border: 1px solid var(--line);
     border-radius: 7px;
-    font-size: 0.85rem;
+    font-size: 0.72rem;
   }
   .add-sub-row button {
     background: var(--accent-soft);
     color: var(--accent);
-    padding: 7px 12px;
+    padding: 6px 10px;
     border-radius: 7px;
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     font-weight: 600;
     white-space: nowrap;
   }
@@ -393,23 +425,23 @@
   .empty-state {
     text-align: center;
     color: var(--muted);
-    padding: 40px 0;
-    font-size: 0.9rem;
+    padding: 34px 0;
+    font-size: 0.78rem;
   }
 
   .toolbar {
     display: flex;
     justify-content: flex-end;
     gap: 8px;
-    margin-top: 28px;
-    padding-top: 16px;
+    margin-top: 24px;
+    padding-top: 14px;
     border-top: 1px solid var(--line);
   }
   .toolbar button {
     background: transparent;
     color: var(--muted);
-    font-size: 0.8rem;
-    padding: 7px 10px;
+    font-size: 0.7rem;
+    padding: 6px 9px;
     border-radius: 7px;
     border: 1px solid var(--line);
   }
@@ -420,19 +452,19 @@
     background: var(--card);
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    padding: 14px 16px;
+    padding: 12px 14px;
     display: flex;
     flex-direction: column;
-    height: 816px;
+    height: 694px;
   }
   .notes-panel h2 {
-    font-size: 0.95rem;
+    font-size: 0.82rem;
     margin: 0 0 4px;
   }
   .notes-panel .notes-hint {
-    font-size: 0.78rem;
+    font-size: 0.68rem;
     color: var(--muted);
-    margin: 0 0 10px;
+    margin: 0 0 9px;
   }
   .notes-panel textarea {
     flex: 1;
@@ -440,9 +472,9 @@
     resize: none;
     border: 1px solid var(--line);
     border-radius: 8px;
-    padding: 10px 12px;
+    padding: 9px 11px;
     font-family: inherit;
-    font-size: 0.9rem;
+    font-size: 0.78rem;
     line-height: 1.5;
     color: var(--ink);
     background: var(--bg);
@@ -450,7 +482,7 @@
   .notes-panel textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   @media (max-width: 980px) {
     .notes-col { max-width: none; }
-    .notes-panel { height: 420px; }
+    .notes-panel { height: 380px; }
   }
 
   .toast {
@@ -460,9 +492,9 @@
     transform: translateX(-50%) translateY(20px);
     background: var(--ink);
     color: white;
-    padding: 10px 18px;
+    padding: 9px 15px;
     border-radius: 8px;
-    font-size: 0.85rem;
+    font-size: 0.72rem;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s, transform 0.2s;
@@ -475,40 +507,46 @@
 <body>
 <div class="app">
   <header>
-    <h1>Step Tasks</h1>
-    <p class="subtitle">Break a task into steps. By default steps unlock in order, and a task can't be checked off until every step is done — toggle the order icon on a task to allow its steps in any order. Click any task or step name to rename it.</p>
+    <div class="header-text">
+      <h1>Step Tasks</h1>
+      <p class="subtitle">Break a task into steps. By default steps unlock in order, and a task can't be checked off until every step is done — toggle the order icon on a task to allow its steps in any order. Click any task or step name to rename it.</p>
+    </div>
+    <div class="board-toggle" id="boardToggle">
+      <button class="board-btn" data-board="work">Work</button>
+      <button class="board-btn" data-board="personal">Personal</button>
+    </div>
   </header>
+
+  <div class="add-task-row">
+    <input type="text" id="newTaskInput" placeholder="Add a new task, e.g. Get ready" maxlength="200">
+    <button class="btn-primary" id="addTaskBtn">Add task</button>
+  </div>
+
+  <div class="overview" id="overview">
+    <div class="overview-card">
+      <div class="overview-label">
+        <span class="name">Tasks completed</span>
+        <span class="stat" id="overviewTasksStat">0/0 · 0%</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="overviewTasksFill" style="width:0%"></div></div>
+    </div>
+    <div class="overview-card">
+      <div class="overview-label">
+        <span class="name">Steps completed</span>
+        <span class="stat" id="overviewStepsStat">0/0 · 0%</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="overviewStepsFill" style="width:0%"></div></div>
+    </div>
+  </div>
 
   <div class="layout">
     <div class="main-col">
-      <div class="add-task-row">
-        <input type="text" id="newTaskInput" placeholder="Add a new task, e.g. Get ready" maxlength="200">
-        <button class="btn-primary" id="addTaskBtn">Add task</button>
-      </div>
-
-      <div class="overview" id="overview">
-        <div class="overview-card">
-          <div class="overview-label">
-            <span class="name">Tasks completed</span>
-            <span class="stat" id="overviewTasksStat">0/0 · 0%</span>
-          </div>
-          <div class="bar-track"><div class="bar-fill" id="overviewTasksFill" style="width:0%"></div></div>
-        </div>
-        <div class="overview-card">
-          <div class="overview-label">
-            <span class="name">Steps completed</span>
-            <span class="stat" id="overviewStepsStat">0/0 · 0%</span>
-          </div>
-          <div class="bar-track"><div class="bar-fill" id="overviewStepsFill" style="width:0%"></div></div>
-        </div>
-      </div>
-
       <div class="task-list" id="taskList"></div>
       <div class="empty-state" id="emptyState" style="display:none;">No tasks yet. Add one above to get started.</div>
 
       <div class="toolbar">
-        <button id="exportBtn" title="Save your tasks and notes to a file on your computer">Export tasks</button>
-        <button id="importBtn" title="Load tasks and notes from a previously exported file">Import tasks</button>
+        <button id="exportBtn" title="Save this board's tasks and notes to a file on your computer">Export tasks</button>
+        <button id="importBtn" title="Load tasks and notes into this board from a previously exported file">Import tasks</button>
         <input type="file" id="importFile" accept="application/json" style="display:none;">
       </div>
     </div>
@@ -529,19 +567,24 @@
 (function () {
   /* ---------- icons ---------- */
   const ICONS = {
-    list: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"></line><line x1="10" y1="12" x2="21" y2="12"></line><line x1="10" y1="18" x2="21" y2="18"></line><line x1="4" y1="6" x2="4.01" y2="6"></line><line x1="4" y1="12" x2="4.01" y2="12"></line><line x1="4" y1="18" x2="4.01" y2="18"></line></svg>',
-    shuffle: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>',
-    repeat: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>'
+    list: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"></line><line x1="10" y1="12" x2="21" y2="12"></line><line x1="10" y1="18" x2="21" y2="18"></line><line x1="4" y1="6" x2="4.01" y2="6"></line><line x1="4" y1="12" x2="4.01" y2="12"></line><line x1="4" y1="18" x2="4.01" y2="18"></line></svg>',
+    shuffle: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>',
+    repeat: '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>'
   };
   const REPEAT_LABELS = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' };
   const REPEAT_CYCLE = [null, 'daily', 'weekly', 'monthly'];
+  const BOARD_NAMES = ['work', 'personal'];
 
-  /* ---------- state ---------- */
-  // tasks = [{ id, title, done, sequential, subtasks: [{ id, title, done, repeat, completedPeriod }] }]
+  /* ---------- state ----------
+     Two independent boards (Work / Personal) each with their own tasks,
+     id counter and notes. `tasks`/`nextId`/`notes` always reflect whichever
+     board is currently active; switchBoard() swaps them out. */
   let tasks = [];
   let nextId = 1;
   let notes = '';
   let editing = null; // { type: 'task', taskId } or { type: 'sub', taskId, subId }
+  let activeBoard = 'work';
+  let allBoards = { work: null, personal: null }; // cache of the inactive board(s)
   const STORAGE_KEY = 'stepTasksData';
 
   const taskListEl = document.getElementById('taskList');
@@ -767,10 +810,20 @@
   }
 
   /* ---------- persistence (this page runs as a normal hosted site, so
-     localStorage is safe here and keeps your list saved between visits) ---------- */
+     localStorage is safe here and keeps your list saved between visits).
+     Both boards are stored together; `activeBoard` remembers which one
+     was open last. ---------- */
   function saveState() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ tasks, nextId, notes }));
+      allBoards[activeBoard] = { tasks, nextId, notes };
+      const payload = {
+        activeBoard,
+        boards: {
+          work: allBoards.work || { tasks: [], nextId: 1, notes: '' },
+          personal: allBoards.personal || { tasks: [], nextId: 1, notes: '' }
+        }
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch (e) {
       // storage unavailable (e.g. private browsing) — silently skip
     }
@@ -781,14 +834,47 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return false;
       const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed.tasks)) return false;
-      tasks = parsed.tasks;
-      nextId = parsed.nextId || 1;
-      notes = typeof parsed.notes === 'string' ? parsed.notes : '';
+      if (!parsed.boards) return false;
+      BOARD_NAMES.forEach(name => {
+        const b = parsed.boards[name];
+        allBoards[name] = (b && Array.isArray(b.tasks)) ? b : null;
+      });
+      activeBoard = BOARD_NAMES.includes(parsed.activeBoard) ? parsed.activeBoard : 'work';
+      const board = allBoards[activeBoard];
+      if (!board) return false;
+      tasks = board.tasks;
+      nextId = board.nextId || 1;
+      notes = typeof board.notes === 'string' ? board.notes : '';
       return true;
     } catch (e) {
       return false;
     }
+  }
+
+  function switchBoard(name) {
+    if (!BOARD_NAMES.includes(name) || name === activeBoard) return;
+    allBoards[activeBoard] = { tasks, nextId, notes }; // stash current before leaving
+    activeBoard = name;
+    const cached = allBoards[activeBoard];
+    if (cached) {
+      tasks = cached.tasks;
+      nextId = cached.nextId || 1;
+      notes = typeof cached.notes === 'string' ? cached.notes : '';
+    } else {
+      tasks = [];
+      nextId = 1;
+      notes = '';
+    }
+    editing = null;
+    notesArea.value = notes;
+    updateBoardToggleUI();
+    render();
+  }
+
+  function updateBoardToggleUI() {
+    document.querySelectorAll('.board-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.board === activeBoard);
+    });
   }
 
   /* ---------- repeating steps: reset any whose period has rolled over ---------- */
@@ -1037,20 +1123,20 @@
     });
   }
 
-  /* ---------- import / export ---------- */
+  /* ---------- import / export (scoped to whichever board is active) ---------- */
   function exportTasks() {
-    const data = JSON.stringify({ tasks, nextId, notes }, null, 2);
+    const data = JSON.stringify({ tasks, nextId, notes, board: activeBoard }, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     const stamp = new Date().toISOString().slice(0, 10);
     a.href = url;
-    a.download = `step-tasks-${stamp}.json`;
+    a.download = `step-tasks-${activeBoard}-${stamp}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    toast('Tasks exported.');
+    toast(`"${activeBoard === 'work' ? 'Work' : 'Personal'}" board exported.`);
   }
 
   function importTasks(file) {
@@ -1065,7 +1151,7 @@
         notesArea.value = notes;
         applyRepeatResets();
         render();
-        toast('Tasks imported.');
+        toast(`Imported into the "${activeBoard === 'work' ? 'Work' : 'Personal'}" board.`);
       } catch (e) {
         toast('Could not read that file.');
       }
@@ -1098,7 +1184,11 @@
     saveState();
   });
 
-  /* ---------- seed example (only if nothing saved yet) ---------- */
+  document.querySelectorAll('.board-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchBoard(btn.dataset.board));
+  });
+
+  /* ---------- seed example (only on true first-ever visit, work board only) ---------- */
   const restored = loadState();
   if (!restored) {
     const seed = makeTask('Get ready');
@@ -1106,6 +1196,7 @@
     tasks.push(seed);
   }
   notesArea.value = notes;
+  updateBoardToggleUI();
 
   // catch any repeating steps that rolled over while the page was closed
   applyRepeatResets();
